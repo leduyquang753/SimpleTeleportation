@@ -1,0 +1,21 @@
+name: SimpleTeleportation
+main: io.github.leduyquang753.Teleportation.Main
+version: 1.0
+author: leduyquang753
+
+commands:
+  sethome:
+    description: Set your home to the current location.
+    usage: /sethome
+    
+  home:
+    description: Teleports you to the home location set.
+    usage: /home
+    
+  nether:
+    description: Teleports you to the Nether.
+    usage: /nether
+    
+  theend:
+    description: Are you ready to beat the boss? Type this command.
+    usage: /theend
