@@ -2,7 +2,6 @@ package io.github.leduyquang753.Teleportation;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -32,15 +31,16 @@ public class Commands implements CommandExecutor {
 			final long z = player.getLocation().getBlockZ();
 			final double yaw = player.getLocation().getYaw();
 			final double pitch = player.getLocation().getPitch();
-			FileConfiguration config = main.getConfig();
+			FileConfiguration config = main.getLocations();
 			config.set("locations." + player.getName() + ".x", x);
 			config.set("locations." + player.getName() + ".y", y);
 			config.set("locations." + player.getName() + ".z", z);
 			config.set("locations." + player.getName() + ".yaw", yaw);
 			config.set("locations." + player.getName() + ".pitch", pitch);
-			main.saveConfig();
+			main.saveLocations();
 			sender.sendMessage(ChatColor.YELLOW + "Your home was set to:  " + x + "  " + y + "  " + z + "  " + yaw + "  " + pitch);
-			main.getLogger().info(player.getName() + "''s home was set to:  " + x + "  " + y + "  " + z + "  " + yaw + "  " + pitch);
+			main.getLogger().info(player.getName() + "'s home was set to:  " + x + "  " + y + "  " + z + "  " + yaw + "  " + pitch);
+			return true;
 		}
 		
 		if (cmd.getName().equalsIgnoreCase("home")) {
@@ -49,7 +49,7 @@ public class Commands implements CommandExecutor {
 				return true;
 			}
 			Player player = (Player) sender;
-			if (!main.getConfig().contains(player.getName())) {
+			if (!main.getLocations().contains("locations." + player.getName())) {
 				player.sendMessage(ChatColor.RED + "You didn't set a home. Set one by doing " + ChatColor.YELLOW + "/sethome" + ChatColor.RED + " in the overworld.");
 				return true;
 			}
@@ -57,18 +57,17 @@ public class Commands implements CommandExecutor {
 				player.sendMessage(ChatColor.RED + "You cannot teleport to home because you are in The End.");
 				return true;
 			}
-			FileConfiguration config = main.getConfig();
-			final long x = config.getLong("locations." + player.getName() + ".x");
-			final long y = config.getLong("locations." + player.getName() + ".y");
-			final long z = config.getLong("locations." + player.getName() + ".z");
-			final double yaw = config.getDouble("locations." + player.getName() + ".yaw");
-			final double pitch = config.getDouble("locations." + player.getName() + ".pitch");
-			player.sendMessage(ChatColor.YELLOW + "You will teleport to home in 5 seconds.");
-			main.getServer().getScheduler().scheduleSyncDelayedTask(main, new Runnable() {
-				  public void run() {
-				      player.teleport(new Location(Bukkit.getWorlds().get(0), x, y, z, (float) yaw, (float) pitch));
-				  }
-				}, 100L);
+			player.sendMessage(ChatColor.YELLOW + "You will teleport to home in " + Main.delay[0] + " seconds.");
+			String msg = "";
+			switch (Main.cancelType[0]) {
+			case 1: msg = "Move"; break;
+			case 2: msg = "Sneak"; break;
+			case 3: msg = "Jump"; break;
+			}
+			Main.removeAllTp(player);
+			if (msg != "") player.sendMessage(ChatColor.YELLOW + msg + " to cancel.");
+			Main.wtps.add(new WorldTeleportation(player, 0));
+			return true;
 		}
 		
 		if (cmd.getName().equalsIgnoreCase("nether")) {
@@ -85,13 +84,16 @@ public class Commands implements CommandExecutor {
 				player.sendMessage(ChatColor.RED + "You cannot teleport to the Nether because you are in The End.");
 				return true;
 			}
-			player.sendMessage(ChatColor.YELLOW + "You will teleport to the Nether in 5 seconds.");
-			Location loc = Bukkit.getWorlds().get(1).getSpawnLocation();
-			main.getServer().getScheduler().scheduleSyncDelayedTask(main, new Runnable() {
-				  public void run() {
-				      player.teleport(loc);
-				  }
-				}, 100L);
+			player.sendMessage(ChatColor.YELLOW + "You will teleport to the Nether in " + Main.delay[1] + " seconds.");
+			String msg = "";
+			switch (Main.cancelType[1]) {
+			case 1: msg = "Move"; break;
+			case 2: msg = "Sneak"; break;
+			case 3: msg = "Jump"; break;
+			}
+			if (msg != "") player.sendMessage(ChatColor.YELLOW + msg + " to cancel.");
+			Main.wtps.add(new WorldTeleportation(player, 1));
+			return true;
 		}
 		
 		if (cmd.getName().equalsIgnoreCase("theend")) {
@@ -104,15 +106,128 @@ public class Commands implements CommandExecutor {
 				return true;
 			}
 			Player player = (Player) sender;
-			player.sendMessage(ChatColor.YELLOW + "You will teleport to The End in 1 minute. Prepare yourself...");
-			Location loc = Bukkit.getWorlds().get(2).getSpawnLocation();
-			main.getServer().getScheduler().scheduleSyncDelayedTask(main, new Runnable() {
-				  public void run() {
-				      player.teleport(loc);
-				  }
-				}, 1200L);
+			player.sendMessage(ChatColor.YELLOW + "You will teleport to The End in " + Main.delay[2] + " seconds. Prepare yourself...");
+			String msg = "";
+			switch (Main.cancelType[2]) {
+			case 1: msg = "Move"; break;
+			case 2: msg = "Sneak"; break;
+			case 3: msg = "Jump"; break;
+			}
+			Main.removeAllTp(player);
+			if (msg != "") player.sendMessage(ChatColor.YELLOW + msg + " to cancel.");
+			Main.wtps.add(new WorldTeleportation(player, 2));
+			return true;
+		}
+		
+		if (cmd.getName().equalsIgnoreCase("tpa")) {
+			if (!Main.PlayerTp && (Main.fairPlay || !sender.isOp())) {
+				sender.sendMessage(ChatColor.RED + "This command is disabled.");
+				return true;
+			}
+			if (!(sender instanceof Player)) {
+				sender.sendMessage(ChatColor.RED + "Only players can do this command.");
+				return true;
+			}
+			Player player = (Player) sender;
+			if (player.getWorld() == Bukkit.getWorlds().get(2)) if (!Main.allowTpInEnd && (Main.fairPlay || !sender.isOp())) {
+				player.sendMessage(ChatColor.RED + "You cannot teleport to a player because you are in The End.");
+				return true;
+			}
+			
+			if (Main.checkPlayer(player)) {
+				player.sendMessage(ChatColor.RED + "You cannot do this because you are having another request. Cancel your request by doing " + ChatColor.YELLOW + "/tpcancel" + ChatColor.RED + ".");
+				return true;
+			}
+			if (args.length == 0) return false;
+			boolean exist = false;
+			Player recvr = player;
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				if (p.getName() == args[0]) exist = true;
+				recvr = p;
+			}
+			if (!exist) {
+				player.sendMessage(ChatColor.RED + "The player isn't online now.");
+				return true;
+			}
+			player.sendMessage(ChatColor.YELLOW + "You have sent a teleport request to " + ChatColor.BLUE + ". They have " + Main.requestTimeout + " seconds to accept.");
+			recvr.sendMessage(ChatColor.BLUE + player.getName() + ChatColor.YELLOW + " wants to teleport to you.");
+			recvr.sendMessage(ChatColor.BLUE + "/tpaccept " + player.getName() + ChatColor.YELLOW + " to accept.");
+			recvr.sendMessage(ChatColor.BLUE + "/tpdeny " + player.getName() + ChatColor.YELLOW + " to deny.");
+			Main.requests.add(new TpRequest(player, recvr));
+			return true;
+		}
+		
+		if (cmd.getName().equalsIgnoreCase("tpcancel")) {
+			if (!(sender instanceof Player)) {
+				sender.sendMessage(ChatColor.RED + "Only players can do this command.");
+				return true;
+			}
+			Player player = (Player) sender;
+			if (!Main.checkPlayer(player)) {
+				player.sendMessage(ChatColor.RED + "You don't have any requests...");
+				return true;
+			}
+			Main.removeRequest(player);
+			return true;
+		}
+		
+		if (cmd.getName().equalsIgnoreCase("tpaccept")) {
+			if (!(sender instanceof Player)) {
+				sender.sendMessage(ChatColor.RED + "Only players can do this command.");
+				return true;
+			}
+			Player player = (Player) sender;
+			boolean exist = false;
+			Player sder = player;
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				if (p.getName() == args[0]) exist = true;
+				sder = p;
+			}
+			if (!exist) {
+				player.sendMessage(ChatColor.RED + "The player isn't online now.");
+				return true;
+			}
+			if (!Main.checkPlayer(sder)) {
+				player.sendMessage(ChatColor.RED + "That player didn't send a request to you.");
+			}
+			player.sendMessage(ChatColor.YELLOW + "You have accepted the request from " + ChatColor.BLUE + sder.getName() + ChatColor.YELLOW + ".");
+			sder.sendMessage(ChatColor.YELLOW + "You will teleport to " + ChatColor.BLUE + player.getName() + ChatColor.YELLOW + " in " + Main.delay[3] + " seconds.");
+			String msg = "";
+			switch (Main.cancelType[0]) {
+			case 1: msg = "Move"; break;
+			case 2: msg = "Sneak"; break;
+			case 3: msg = "Jump"; break;
+			}
+			Main.removeAllTp(sder);
+			if (msg != "") player.sendMessage(ChatColor.YELLOW + msg + " to cancel.");
+			Main.tps.add(new PlayerTeleportation(sder, player));
+			return true;
+		}
+		
+		if (cmd.getName().equalsIgnoreCase("tpaccept")) {
+			if (!(sender instanceof Player)) {
+				sender.sendMessage(ChatColor.RED + "Only players can do this command.");
+				return true;
+			}
+			Player player = (Player) sender;
+			boolean exist = false;
+			Player sder = player;
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				if (p.getName() == args[0]) exist = true;
+				sder = p;
+			}
+			if (!exist) {
+				player.sendMessage(ChatColor.RED + "The player isn't online now.");
+				return true;
+			}
+			if (!Main.checkPlayer(sder)) {
+				player.sendMessage(ChatColor.RED + "That player didn't send a request to you.");
+			}
+			player.sendMessage(ChatColor.YELLOW + "You have denied the request from " + ChatColor.BLUE + sder.getName() + ChatColor.YELLOW + ".");
+			sder.sendMessage(ChatColor.YELLOW + player.getName() + ChatColor.RED + " has denied your request.");
+			Main.removeRequest(sder);
+			return true;
 		}
 		return false;
 	}
-
 }
