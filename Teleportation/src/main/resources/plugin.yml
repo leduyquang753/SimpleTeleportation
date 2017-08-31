@@ -1,6 +1,6 @@
 name: SimpleTeleportation
 main: io.github.leduyquang753.Teleportation.Main
-version: 1.0
+version: 1.1
 author: leduyquang753
 
 commands:
