@@ -7,26 +7,29 @@
 nether: true
 theend: true
 
+# This enables teleporting to the players and whether they have to wait the other player to accept the request.
+playerteleport: true
+mustrequest: true
+# Teleport request timeout (positive integer, seconds).
+requesttimeout: 60
+
 # This allows the player to teleport even they are in The End.
 allowtpinend: false
 
 # Fair-play mode: Ops cannot type the commands that are not enabled, just like normal players.
 fairplay: false
 
-# HOME LOCATIONS SECTION
-# Only change this if you know what this is all about.
-# Section structure:
-# locations:
-#   [player_name]:
-#      x: [The x of home, integer]
-#      y: [The y of home, integer]
-#      z: [The z of home, integer]
-#      yaw: [The horizontal orientation]
-#      pitch: [The vertical orientation]
-locations:
- Example:
-   x: 0
-   y: 100
-   z: 0
-   yaw: 0
-   pitch: 0
+# Teleportation delay. Remember to type non-negative integers.
+delay:
+ home: 5
+ nether: 5
+ theend: 60
+ player: 5
+ 
+# This sets how to cancel the teleportation. Choose one of the following:
+# NONE, MOVE, SNEAK
+cancelevent:
+ home: MOVE
+ nether: MOVE
+ theend: NONE
+ player: SNEAK

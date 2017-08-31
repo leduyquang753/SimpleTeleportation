@@ -1,0 +1,19 @@
+# Simple Teleportation home locations file.
+# Plugin by Le Duy Quang (github.com/leduyquang753).
+
+# This file stores all the home locations that players have set.
+# Changing this file will take effect immediately.
+
+# File structure:
+#   [player_name]:
+#      x: [The x of home, integer]
+#      y: [The y of home, integer]
+#      z: [The z of home, integer]
+#      yaw: [The horizontal orientation]
+#      pitch: [The vertical orientation]
+Example:
+  x: 0
+  y: 100
+  z: 0
+  yaw: 0
+  pitch: 0
